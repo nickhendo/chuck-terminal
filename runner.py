@@ -26,7 +26,7 @@ with db_connection:
     new_entries = []
 
     if num_quotes_in_db - len(quotes_list) > 0:
-        logger.info(f"Retrieving {num_quotes_in_db - len(quotes_list)} new quotes")
+        logger.info(f"Retrieving {num_quotes_in_db - len(quotes_list)} new quote{'s' if num_quotes_in_db - len(quotes_list) > 1 else ''}")
         while len(quotes_list) + len(new_entries) < num_quotes_in_db:
             try:
                 new_quote = requests.get("https://api.chucknorris.io/jokes/random").json()["value"]
@@ -35,6 +35,6 @@ with db_connection:
             new_entries.append((new_quote,))
 
         cursor.executemany("INSERT INTO quotes VALUES (?)", new_entries)
-        logger.info(f"{len(new_entries)} quotes added to database")
+        logger.info(f"{len(new_entries)} quote{'s' if len(new_entries) > 1 else ''} added to database")
 
 db_connection.close()
