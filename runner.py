@@ -1,28 +1,38 @@
 import sqlite3
 import requests
 import logging
-import datetime
 import os
 
-logger = logging.basicConfig(filename="chuck_logs.log", level=logging.DEBUG)
-db_connection = sqlite3.connect("quotes.db")
-cursor = db_connection.cursor()
+num_quotes_in_db = 10
+log_to_file = True
+log_location = "chuck_logs.log"
+db_location = "quotes.db"
 
-num_rows = 10
+logger = logging.getLogger(str(os.getpid()))
+if log_to_file:
+    logging.basicConfig(format=f'%(asctime)s: [%(name)s] %(message)s', datefmt='%d/%m/%y %H:%M:%S',
+                        filename=log_location, level=logging.INFO)
+else:
+    logging.NullHandler()
 
-cursor.execute("CREATE table IF NOT EXISTS quotes (date text, quote text)")
+db_connection = sqlite3.connect(db_location)
+with db_connection:
+    cursor = db_connection.cursor()
 
-cursor.execute("SELECT * FROM quotes")
-quotes_list = cursor.fetchall()
-trys = 0
-new_entries = []
-logger.
-while len(quotes_list) + len(new_entries) < num_rows and trys < 5:
-    new_quote = requests.get("https://api.chucknorris.io/jokes/random").json()["value"]
-    trys += 1
-    new_entries.append((datetime.datetime.now().date(), new_quote))
-if new_entries:
-    cursor.executemany("INSERT INTO quotes VALUES (?, ?)", new_entries)
+    cursor.execute("CREATE table IF NOT EXISTS quotes (quote text)")
+    cursor.execute("SELECT * FROM quotes")
+    quotes_list = cursor.fetchall()
 
-db_connection.commit()
+    quotes_list = quotes_list if quotes_list else []
+    new_entries = []
+
+    if num_quotes_in_db - len(quotes_list) > 0:
+        logger.info(f"Retrieving {num_quotes_in_db - len(quotes_list)} new quotes")
+        while len(quotes_list) + len(new_entries) < num_quotes_in_db:
+            new_quote = requests.get("https://api.chucknorris.io/jokes/random").json()["value"]
+            new_entries.append((new_quote,))
+
+        cursor.executemany("INSERT INTO quotes VALUES (?)", new_entries)
+        logger.info(f"{len(new_entries)} quotes added to database")
+
 db_connection.close()
