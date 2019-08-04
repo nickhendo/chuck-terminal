@@ -18,7 +18,6 @@ else:
 db_connection = sqlite3.connect(db_location)
 with db_connection:
     cursor = db_connection.cursor()
-
     cursor.execute("CREATE table IF NOT EXISTS quotes (quote text)")
     cursor.execute("SELECT * FROM quotes")
     quotes_list = cursor.fetchall()
@@ -29,7 +28,10 @@ with db_connection:
     if num_quotes_in_db - len(quotes_list) > 0:
         logger.info(f"Retrieving {num_quotes_in_db - len(quotes_list)} new quotes")
         while len(quotes_list) + len(new_entries) < num_quotes_in_db:
-            new_quote = requests.get("https://api.chucknorris.io/jokes/random").json()["value"]
+            try:
+                new_quote = requests.get("https://api.chucknorris.io/jokes/random").json()["value"]
+            except requests.ConnectionError as error_message:
+                logger.critical(error_message)
             new_entries.append((new_quote,))
 
         cursor.executemany("INSERT INTO quotes VALUES (?)", new_entries)
